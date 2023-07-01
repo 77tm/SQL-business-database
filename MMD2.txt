@@ -1,0 +1,134 @@
+------------------------CREATE--------------------------------
+CREATE TABLE customers (
+	id int NOT NULL IDENTITY(1,1),
+	firstName varchar(255) NOT NULL,
+	lastName varchar(255) NOT NULL,
+	city varchar(255),
+	age int,
+	PRIMARY KEY (id)
+);
+
+CREATE TABLE our_tools (
+	id int NOT NULL IDENTITY(1,1),
+	name varchar(255) NOT NULL,
+	brand varchar(255) DEFAULT('-'),
+	PRIMARY KEY (id)
+);
+
+CREATE TABLE rent_logs (
+	id int NOT NULL,
+	customerID int NOT NULL FOREIGN KEY REFERENCES customers(id),
+	toolID int NOT NULL FOREIGN KEY REFERENCES our_tools(id),
+	startDate date,
+	endDate date,
+	toolDamage varchar(255) DEFAULT('No'),
+	PRIMARY KEY(id)
+);
+
+--------------------------INSERT-------------------------------------
+
+INSERT INTO Customers (firstName, lastName, city, age)
+VALUES ('Mārcis', 'Kalniņš', 'Rīga', '23'),
+	   ('Līga', 'Bērziņa', 'Ogre', '32'),
+	   ('Kārlis', 'Zemitāns', 'Sigulda', '41'),
+	   ('Pēteris', 'Ozols', 'Rīga', '28'),
+	   ('Anna', 'Puķīte', 'Rīga', '25'),
+	   ('Jānis', 'Tūja', 'Ādaži', DEFAULT);
+
+INSERT INTO our_tools
+VALUES ('Pneimatiskā urbjmašīna Stanley', 'Stanley'),
+	   ('Sniega lāpsta Fiskars', 'Fiskars'),
+	   ('Gumijas āmurs 980 gr.', DEFAULT),
+	   ('Lentas slīpmašīna Makita', 'Makita'),
+	   ('Triecienurbjmašīna Bosch Easy Impact 540 AKC', 'Bosch'),
+	   ('Akumulatora ventilators Makita DCF203Z d25cm', 'Makita');
+
+INSERT INTO rent_logs (id, customerID, toolID, startDate, endDate, toolDamage)
+VALUES ('1', '3', '5', '2020-02-13', '2020-02-14', DEFAULT),
+	   ('2', '2', '1', '2020-02-15', '2020-02-16', DEFAULT),
+	   ('3', '1', '5', '2020-02-18', '2020-02-19', DEFAULT),
+	   ('4', '5', '1', '2020-02-23', '2020-02-25', DEFAULT),
+	   ('5', '4', '4', '2020-02-23', '2020-02-26', DEFAULT),
+	   ('6', '5', '3', '2020-02-26', '2020-02-27', 'Yes'),
+	   ('7', '2', '1', '2020-03-01', '2020-03-02', DEFAULT),
+	   ('8', '2', '2', '2020-03-01', '2020-03-02', DEFAULT),
+	   ('9', '2', '5', '2020-03-01', '2020-03-02', DEFAULT),
+	   ('10', '6', '6', '2020-03-04', '2020-03-05', DEFAULT),
+	   ('11', '6', '2', '2020-03-04', '2020-03-05', DEFAULT),
+	   ('12', '4', '1', '2020-03-05', '2020-03-07', DEFAULT),
+	   ('13', '2', '6', '2020-03-05', '2020-03-08', DEFAULT),
+	   ('14', '2', '5', '2020-03-05', '2020-03-09', 'Yes'),
+	   ('15', '3', '6', '2020-03-14', '2020-03-15', DEFAULT),
+	   ('16', '3', '4', '2020-03-14', '2020-03-15', DEFAULT),
+	   ('17', '4', '2', '2020-03-16', '2020-03-17', DEFAULT),
+	   ('18', '5', '4', '2020-03-17', '2020-03-18', 'Yes'),
+	   ('19', '2', '6', '2020-03-18', '2020-03-18', DEFAULT),
+	   ('20', '4', '4', '2020-03-19', '2020-03-20', DEFAULT);
+
+--------------------------JOIN--------------------------------------
+
+SELECT customerID AS 'Customer ID', customers.lastName AS 'Last Name', our_tools.id AS 'Tool ID', our_tools.name AS 'Tool Name', rent_logs.toolDamage AS 'Damaged tool'
+FROM rent_logs							-- izvelamies konkretas kolonnas no 3 datubazem
+JOIN our_tools ON our_tools.id = rent_logs.toolID		-- savienojam our_tools un rent_logs sakritosus toolID
+JOIN customers ON rent_logs.customerID = customers.id		-- savienojam customers un rent_logs sakritosus klienta ID
+WHERE rent_logs.toolDamage = 'Yes'				-- izvelamies tiesi kur riiks netika bojats
+ORDER BY customers.id;						-- sakartojam pec klienta ID pieaugosi
+
+------------------------GROUP--BY----------------------------------
+
+SELECT customerID, 						
+       COUNT(*) AS total_rentals,					-- skaitam cik reizes customerID paradas tabula
+       SUM(DATEDIFF(day, startDate, endDate)) AS total_rental_days,	-- no sakuma + beigu datumiem iegustam cik dienas notikusi ire un saskaitam visas dienas kopa
+       MAX(endDate) AS latest_return_date				-- paskatamies kads ir lielakais, tatad velakais ires beigu datums
+FROM rent_logs								-- no videjas tabulas
+WHERE toolDamage = 'No'							
+GROUP BY customerID							-- grupejam pec customerID
+HAVING COUNT(*) >= 2							-- un paradam tikai tos, kas ir irejusi vismaz 2 reizes
+ORDER BY total_rentals DESC;						-- sakartojam, ka visvairak ires reizu augsa
+
+------------------JOIN--UN--GROUP--BY----------------------------------
+
+SELECT customers.city, rent_logs.toolID, COUNT(*) as totalRentals	-- izvelamies pilsetu, toolID un saskaitisim cik reizes katrs riks katra pilseta ir izirets
+FROM customers		
+JOIN rent_logs ON customers.id = rent_logs.customerID			-- savienojam rent_logs ar customers, kur sakrit klienta ID
+GROUP BY customers.city, rent_logs.toolID				-- grupejam pec pilsetas un pec toolID
+ORDER BY totalRentals DESC;						-- sakartots, ka augsa visvairak totalRentals
+
+----------------------------APAKSVAICAJUMS-----------------------------
+
+SELECT 
+    customers.firstName, 
+    customers.lastName, 
+    customers.city, 
+    COUNT(rent_logs.id) AS total_rentals,						-- skaitam cik ierakstu rent_logs kopā
+    SUM(DATEDIFF(day, rent_logs.startDate, rent_logs.endDate)) AS total_rental_days	-- saskaitam cik dienas kopā no sakuma lidz beigu datumiem
+FROM 
+    dbo.customers
+JOIN 
+    dbo.rent_logs ON customers.id = rent_logs.customerID				-- apvienojam rent_logs un customers pec customerID
+GROUP BY 
+    customers.firstName, 								-- grupejam pec klienta varda, uzvarda un pilsetas
+    customers.lastName, 
+    customers.city
+ORDER BY 
+    total_rentals DESC;									-- taa, lai sakartots pec kopejam ires reizem
+
+----------------------------APAKSVAICAJUMS-----------------------------
+
+SELECT firstName, lastName, city						-- izvelamies vardu, uzvardu un pilsetu no customers tabulas
+FROM customers
+WHERE id IN (
+  SELECT customerID								-- kur izvelamies visus klientu id no rent_logs tabulas
+  FROM rent_logs
+  WHERE toolID IN (								-- kur toolID our_tools tabulaa
+    SELECT id
+    FROM our_tools								-- atbilst brendam 'Makita'
+    WHERE brand = 'Makita'							
+  )										-- rezultata iegustam sarakstu ar klientiem, kas kadreiz irejusi kadu 'Makita' firmas darbariku
+);
+
+----------------------------DROP---------------------------------------
+
+DROP TABLE rent_logs;							-- no sakuma jaizmet videja tabula, jo taja ir FK
+DROP TABLE our_tools;							-- tad var izmest malejas tabulas
+DROP TABLE customers;

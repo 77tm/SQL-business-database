@@ -1,0 +1,121 @@
+CREATE TABLE Klients (
+  klients_id INT PRIMARY KEY,
+  vards VARCHAR(50),
+  uzvards varchar(50),
+  personas_kods nchar(12) NOT NULL,
+  pilseta varchar(50),
+  automasina_id int
+);
+
+CREATE TABLE Automasina (
+  automasina_id INT PRIMARY KEY,
+  marka varchar(50),
+  nosaukums VARCHAR(50),
+  klients_id int,
+  menesa_ire smallmoney
+);
+
+------insert---------
+
+
+INSERT INTO Klients (klients_id, vards, uzvards, personas_kods, pilseta, automasina_id)
+VALUES
+  (1, 'Janis', 'Smiltins', '200301-21513', 'Riga', 1),
+  (2, 'Anna', 'Liepa', '101002-31534', 'Liepaja', 8),
+  (3, 'Peteris', 'Ozols', '051101-41905', 'Jelgava', 3),
+  (4, 'Linda', 'Berzina', '031203-61871', 'Ventspils', 6),
+  (5, 'Janis', 'Lapins', '120903-50822', 'Daugavpils', 15),
+  (6, 'Laura', 'Saulite', '230203-31086', 'Ventspils', 19),
+  (7, 'Andris', 'Briedis', '161092-11797', 'Jurmala', 2),
+  (8, 'Inese', 'Krumina', '040777-91198', 'Rezekne', 10),
+  (9, 'Roberts', 'Kalnins', '270288-21659', 'Ogre', 4),
+  (10, 'Elina', 'Priede', '310479-31481', 'Cesis', 13),
+  (11, 'Juris', 'Gulbis', '110560-81876', 'Sigulda', 9),
+  (12, 'Kristine', 'Zarina', '221291-62041', 'Tukums', 17),
+  (13, 'Arturs', 'Sprogis', '170592-42262', 'Saldus', 5),
+  (14, 'Inga', 'Lielmane', '010393-11803', 'Ogre', 11),
+  (15, 'Rihards', 'Berzins', '240104-32214', 'Sigulda', 7),
+  (16, 'Anita', 'Celma', '090985-52547', 'Sigulda', 20),
+  (17, 'Edgars', 'Mucenieks', '281076-92734', 'Riga', 12),
+  (18, 'Dace', 'Silina', '140617-22685', 'Aizkraukle', 18),
+  (19, 'Kaspars', 'Ziverts', '180388-82876', 'Jekabpils', 14),
+  (20, 'Zane', 'Vilcane', '051099-13100', 'Riga', 16);
+
+
+INSERT INTO Automasina (automasina_id, marka, nosaukums, klients_id, menesa_ire)
+VALUES
+  (1, 'Toyota', 'Corolla', 1, 415.89),
+  (2, 'Honda', 'Civic', 7, 652.76),
+  (3, 'Volkswagen', 'Golf', 3, 586.43),
+  (4, 'Ford', 'Focus', 9, 423.52),
+  (5, 'BMW', 'X5', 13, 697.31),
+  (6, 'Mercedes-Benz', 'C-Class', 4, 524.17),
+  (7, 'Audi', 'A4', 15, 483.28),
+  (8, 'Nissan', 'Qashqai', 2, 590.96),
+  (9, 'Mercedes-Benz', 'E-Class', 11, 719.65),
+  (10, 'Volvo', 'XC90', 8, 672.41),
+  (11, 'Renault', 'Megane', 14, 422.93),
+  (12, 'Hyundai', 'Tucson', 17, 598.74),
+  (13, 'Kia', 'Sportage', 10, 397.82),
+  (14, 'Peugeot', '308', 19, 542.39),
+  (15, 'Subaru', 'Forester', 5, 710.56),
+  (16, 'Mercedes-Benz', 'S-Class', 20, 1066.87),
+  (17, 'Jeep', 'Wrangler', 12, 541.24),
+  (18, 'Fiat', '500', 18, 375.28),
+  (19, 'Suzuki', 'Swift', 6, 678.09),
+  (20, 'Mitsubishi', 'Outlander', 16, 742.64);
+
+--------FK-----------------
+
+ALTER TABLE Klients
+ADD CONSTRAINT FK_Klients_Automasina
+FOREIGN KEY (automasina_id) REFERENCES Automasina(automasina_id);
+
+ALTER TABLE Automasina
+ADD CONSTRAINT FK_Automasina_Klients
+FOREIGN KEY (klients_id) REFERENCES Klients(klients_id);
+
+-----Triju tabulu Join---------
+
+Select Klients.vards, Klients.uzvards, Klients.pilseta, Automasina.marka, Automasina.nosaukums, Automasina.menesa_ire
+FROM Klients
+Join Automasina ON Klients.automasina_id = Automasina.automasina_id --savienojam sakritosas automasina_id vertibas
+join Klients as K2 on Automasina.klients_id = K2.klients_id 	    --savienojam sakritosas klients_id vertibas
+
+-----Salikts apakšvaicājums-----
+
+--Paradit pilsetas no klientiem, kuras tiek videji iretas visdargakas automasinas
+
+SELECT Klients.pilseta, Automasina.menesa_ire
+FROM Klients
+JOIN Automasina ON Klients.automasina_id = Automasina.automasina_id --savienojam sakritosas automasinas_id vertibas
+GROUP BY Klients.pilseta, Automasina.menesa_ire			    --grupejam pec pilsetas un menesa_ire
+HAVING AVG(Automasina.menesa_ire) = (				    --kur panemta maximala videja menesa ire
+  SELECT MAX(avg_ire)
+  FROM (
+    SELECT AVG(menesa_ire) AS avg_ire				    --no Automasina tabulas, izveloties menesa_ire
+    FROM Automasina
+	JOIN Klients ON Automasina.klients_id = Klients.klients_id
+    GROUP BY Klients.pilseta					    --grupejot pec pilsetas
+  ) AS avg_ire_table
+);
+
+-----SQL 'loga' funkcija------
+
+SELECT automasina_id, marka, nosaukums, menesa_ire,
+       RANK() OVER (PARTITION BY marka ORDER BY menesa_ire ASC) AS rank --RANK() ir loga funkcija, kas saja vaicajuma pieskir
+FROM Automasina;							--kartas nr. katram auto modelim, dalot pec markas, 
+									--vadoties pec menesa ires, kartojot sakot ar mazako
+
+-------ALTER----------------
+
+ALTER TABLE Automasina
+DROP CONSTRAINT FK_Automasina_Klients;
+
+ALTER TABLE Klients
+DROP CONSTRAINT FK_Klients_Automasina;
+
+---------DROP--------------
+
+DROP TABLE Automasina;
+DROP TABLE Klients;
